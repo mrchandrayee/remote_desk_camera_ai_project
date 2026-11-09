@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{ title }}</title><link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header><div><div class="eyebrow">REMOTE MONITORING</div><h1>{{ title }}</h1><p>Live desktop and camera overview</p></div><span class="live"><i></i> LIVE</span></header>
+<main>
+<section class="toolbar"><div><b>Connected sources</b><span id="count">Loading…</span></div><button onclick="refresh()">Refresh status</button></section>
+<section id="grid" class="grid"><div class="empty">Loading sources…</div></section>
+</main>
+<footer>View-only monitoring dashboard · Configure sources in <code>config.yaml</code></footer>
+<script>
+async function refresh(){
+ const grid=document.getElementById('grid');
+ try{
+  const r=await fetch('/api/sources'); const items=await r.json();
+  document.getElementById('count').textContent=items.length+' configured';
+  if(!items.length){grid.innerHTML='<div class="empty">No sources enabled. Enable desktop or add cameras in config.yaml.</div>';return;}
+  grid.innerHTML=items.map(x=>`<article class="card">
+   <div class="cardhead"><div><h2>${esc(x.name)}</h2><small>${esc(x.id)}</small></div>
+   <span class="state ${x.online?'on':'off'}">${x.online?'ONLINE':'WAITING'}</span></div>
+   <div class="screen">${x.online?`<img loading="lazy" src="/stream/${encodeURIComponent(x.id)}" alt="${esc(x.name)} live stream">`:'<div class="offline">Waiting for video frames…</div>'}</div>
+   <div class="cardfoot"><span class="${x.motion?'motion':''}">${x.motion?'● Motion detected':'● No motion alert'}</span>
+   <a href="/snapshot/${encodeURIComponent(x.id)}" target="_blank">Snapshot ↗</a></div>
+  </article>`).join('');
+ }catch(e){grid.innerHTML='<div class="empty">Dashboard API unavailable. Check server logs.</div>';}
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+refresh();setInterval(refresh,4000);
+</script>
+</body></html>
